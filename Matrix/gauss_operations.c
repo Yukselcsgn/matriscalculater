@@ -2,37 +2,40 @@
 #include <stdlib.h>
 #include <math.h>
 #include "gauss_operations.h"
-#include "utils.h" // Matris iþlemleri için gerekli
+#include "utils.h"
 
-// Gauss Eliminasyonu: Satýr indirgeme
-bool gaussian_elimination(int rows, int cols, double** matrix, double* solutions) {
+// Gauss Eliminasyonu: GeniÅŸletilmiÅŸ matrisi Ã¼st Ã¼Ã§gensel hale getirme
+bool gaussian_elimination(int rows, int cols, double** matrix) {
+    if (!matrix || rows <= 0 || cols <= rows) {
+        return false;
+    }
+
     for (int i = 0; i < rows; i++) {
-        // Pivot eleman sýfýr ise satýr deðiþtirme
-        if (fabs(matrix[i][i]) < 1e-9) {
-            bool swapped = false;
-            for (int k = i + 1; k < rows; k++) {
-                if (fabs(matrix[k][i]) > 1e-9) {
-                    swap_rows(cols, matrix, i, k);
-                    swapped = true;
-                    break;
-                }
-            }
-            if (!swapped) {
-                printf("Sýfýr pivot bulundu. Sistem çözümsüz veya sonsuz çözümlü.\n");
-                return false;
-            }
-        }
-
-        // Satýrý normalize et
-        double pivot = matrix[i][i];
-        for (int j = 0; j < cols; j++) {
-            matrix[i][j] /= pivot;
-        }
-
-        // Alt satýrlarý sýfýrla
+        // En bÃ¼yÃ¼k mutlak deÄŸerli pivotu bul (KÄ±smi pivotlama)
+        int max_row = i;
+        double max_val = fabs(matrix[i][i]);
         for (int k = i + 1; k < rows; k++) {
-            double factor = matrix[k][i];
-            for (int j = 0; j < cols; j++) {
+            if (fabs(matrix[k][i]) > max_val) {
+                max_val = fabs(matrix[k][i]);
+                max_row = k;
+            }
+        }
+
+        // Pivot sÄ±fÄ±ra yakÄ±nsa, tekil sistem
+        if (max_val < 1e-12) {
+            return false;
+        }
+
+        // SatÄ±r takaslama
+        if (max_row != i) {
+            swap_rows(cols, matrix, i, max_row);
+        }
+
+        // Alt satÄ±rlarÄ± sÄ±fÄ±rla
+        for (int k = i + 1; k < rows; k++) {
+            double factor = matrix[k][i] / matrix[i][i];
+            matrix[k][i] = 0.0;
+            for (int j = i + 1; j < cols; j++) {
                 matrix[k][j] -= factor * matrix[i][j];
             }
         }
@@ -40,13 +43,17 @@ bool gaussian_elimination(int rows, int cols, double** matrix, double* solutions
     return true;
 }
 
-// Geriye Yerleþtirme: Çözümleri hesapla
+// Geriye yerine koyma (Backward Substitution)
 void backward_substitution(int rows, int cols, double** matrix, double* solutions) {
+    if (!matrix || !solutions) {
+        return;
+    }
+
     for (int i = rows - 1; i >= 0; i--) {
         solutions[i] = matrix[i][cols - 1];
         for (int j = i + 1; j < rows; j++) {
             solutions[i] -= matrix[i][j] * solutions[j];
         }
+        solutions[i] /= matrix[i][i];
     }
 }
-

@@ -1,17 +1,16 @@
 #ifndef VECTOR_OPERATIONS_H
 #define VECTOR_OPERATIONS_H
 
-// Nokta �arp�m�
+// Nokta çarpımı (Dot product)
 double dot_product(int size, double* vectorA, double* vectorB);
 
-// �apraz �arp�m
+// Çapraz çarpım (Cross product - 3 boyutlu vektörler için)
 void cross_product(double* vectorA, double* vectorB, double* result);
 
-// Vekt�r normu
+// Vektör normu (büyüklüğü / uzunluğu)
 double vector_magnitude(int size, double* vector);
 
-// Vekt�r �l�ekleme
+// Vektör ölçekleme (skaler ile çarpım)
 void scale_vector(int size, double* vector, double scalar);
 
 #endif
-

@@ -1,70 +1,110 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "eigenvalues_vectors.h"
+#include "utils.h"
 
-// Jacobi rotasyonu ile özdeðer ve özvektör hesaplama
+// Jacobi rotasyonu ile simetrik matrislerin Ã¶zdeÄŸer ve Ã¶zvektÃ¶rlerini hesaplama
 int eigenvalue_vector(double** matrix, double* eigenvalues, double** eigenvectors, int n) {
-    double tolerance = 1.0e-10;
-    double max_off_diag = 0.0;
-    double temp;
-    
-    // Ýlk olarak özvektör matrisini birim matris olarak ayarla
+    if (!matrix || !eigenvalues || !eigenvectors || n <= 0) {
+        return -1;
+    }
+
+    // Orijinal matrisi korumak iÃ§in yerel kopyasÄ±nÄ± al
+    double** a = create_matrix(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            a[i][j] = matrix[i][j];
+        }
+    }
+
+    // Matrisin simetrik olup olmadÄ±ÄŸÄ±nÄ± kontrol et
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (fabs(a[i][j] - a[j][i]) > 1e-6) {
+                printf("Uyari: Jacobi metodu yalnizca simetrik matrisler icin gecerlidir!\n");
+                free_matrix(a, n);
+                return -1;
+            }
+        }
+    }
+
+    // Ã–zvektÃ¶r matrisini birim matris (Identity) olarak baÅŸlat
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             eigenvectors[i][j] = (i == j) ? 1.0 : 0.0;
         }
     }
 
-    // Ana döngü: Jacobi rotasyonlarý ile matrisin özdeðerleri ve özvektörleri hesaplanacak
-    do {
-        max_off_diag = 0.0;
+    double tolerance = 1e-10;
+    int max_iterations = 100 * n * n;
+    int iter = 0;
 
-        // Matrisin dýþ üçgen kýsmýndaki her öðe için
+    while (iter < max_iterations) {
+        // KÃ¶ÅŸegen dÄ±ÅŸÄ±ndaki mutlak en bÃ¼yÃ¼k elemanÄ± bul (p, q)
+        int p = 0, q = 1;
+        double max_val = 0.0;
+
         for (int i = 0; i < n - 1; i++) {
             for (int j = i + 1; j < n; j++) {
-                temp = fabs(matrix[i][j]);
-
-                // Eðer dýþ üçgen öðesi tolerans deðerini aþarsa
-                if (temp > max_off_diag) {
-                    max_off_diag = temp;
-
-                    // Jacobi rotasyonunu uygula
-                    double tau, t, c, s;
-                    tau = (matrix[j][j] - matrix[i][i]) / (2 * matrix[i][j]);
-                    t = (tau >= 0) ? (1.0 / (tau + sqrt(1 + tau * tau))) : (-1.0 / (-tau + sqrt(1 + tau * tau)));
-                    c = 1.0 / sqrt(1 + t * t);
-                    s = c * t;
-
-                    // Matrisin öðelerini güncelle
-                    double temp_i_j = matrix[i][j];
-                    matrix[i][j] = 0.0;
-                    matrix[j][i] = 0.0;
-
-                    for (int k = 0; k < n; k++) {
-                        if (k != i && k != j) {
-                            double temp_ik = matrix[i][k];
-                            matrix[i][k] = c * temp_ik - s * matrix[j][k];
-                            matrix[j][k] = s * temp_ik + c * matrix[j][k];
-                            matrix[k][i] = matrix[i][k];
-                        }
-                    }
-
-                    // Özvektörleri güncelle
-                    for (int k = 0; k < n; k++) {
-                        double temp_ik = eigenvectors[i][k];
-                        eigenvectors[i][k] = c * temp_ik - s * eigenvectors[j][k];
-                        eigenvectors[j][k] = s * temp_ik + c * eigenvectors[j][k];
-                    }
+                if (fabs(a[i][j]) > max_val) {
+                    max_val = fabs(a[i][j]);
+                    p = i;
+                    q = j;
                 }
             }
         }
-    } while (max_off_diag > tolerance);
 
-    // Özdeðerleri almak için matrisin diagonalýný al
-    for (int i = 0; i < n; i++) {
-        eigenvalues[i] = matrix[i][i];
+        // ToleransÄ±n altÄ±na indiyse yakÄ±nsama saÄŸlandÄ±
+        if (max_val < tolerance) {
+            break;
+        }
+
+        // Jacobi rotasyon aÃ§Ä±sÄ±nÄ± hesapla
+        double apq = a[p][q];
+        double theta = (a[q][q] - a[p][p]) / (2.0 * apq);
+        double t;
+        if (theta >= 0.0) {
+            t = 1.0 / (theta + sqrt(1.0 + theta * theta));
+        } else {
+            t = -1.0 / (-theta + sqrt(1.0 + theta * theta));
+        }
+
+        double c = 1.0 / sqrt(1.0 + t * t);
+        double s = t * c;
+
+        // KÃ¶ÅŸegen elemanlarÄ±nÄ± gÃ¼ncelle
+        a[p][p] -= t * apq;
+        a[q][q] += t * apq;
+        a[p][q] = 0.0;
+        a[q][p] = 0.0;
+
+        // DiÄŸer elemanlarÄ± gÃ¼ncelle
+        for (int k = 0; k < n; k++) {
+            if (k != p && k != q) {
+                double akp = a[k][p];
+                double akq = a[k][q];
+                a[k][p] = a[p][k] = c * akp - s * akq;
+                a[k][q] = a[q][k] = s * akp + c * akq;
+            }
+        }
+
+        // Ã–zvektÃ¶r matrisini gÃ¼ncelle (sÃ¼tun rotasyonu)
+        for (int k = 0; k < n; k++) {
+            double vkp = eigenvectors[k][p];
+            double vkq = eigenvectors[k][q];
+            eigenvectors[k][p] = c * vkp - s * vkq;
+            eigenvectors[k][q] = s * vkp + c * vkq;
+        }
+
+        iter++;
     }
 
-    return 0; // Baþarýlý
-}
+    // KÃ¶ÅŸegen deÄŸerleri Ã¶zdeÄŸerlerdir
+    for (int i = 0; i < n; i++) {
+        eigenvalues[i] = a[i][i];
+    }
 
+    free_matrix(a, n);
+    return 0;
+}

@@ -2,36 +2,91 @@
 #include <stdlib.h>
 #include "utils.h"
 
-// Dinamik matris oluşturma
+// Dinamik matris oluÅŸturma
 double** create_matrix(int rows, int cols) {
+    if (rows <= 0 || cols <= 0) {
+        return NULL;
+    }
     double** matrix = (double**)malloc(rows * sizeof(double*));
+    if (!matrix) {
+        fprintf(stderr, "Bellek tahsisi basarisiz.\n");
+        exit(EXIT_FAILURE);
+    }
     for (int i = 0; i < rows; i++) {
         matrix[i] = (double*)malloc(cols * sizeof(double));
+        if (!matrix[i]) {
+            fprintf(stderr, "Bellek tahsisi basarisiz.\n");
+            for (int k = 0; k < i; k++) {
+                free(matrix[k]);
+            }
+            free(matrix);
+            exit(EXIT_FAILURE);
+        }
     }
     return matrix;
 }
 
-// Dinamik matris serbest bırakma
+// Dinamik matris serbest bÄ±rakma
 void free_matrix(double** matrix, int rows) {
+    if (!matrix) {
+        return;
+    }
     for (int i = 0; i < rows; i++) {
-        free(matrix[i]);
+        if (matrix[i]) {
+            free(matrix[i]);
+        }
     }
     free(matrix);
 }
 
-// Matris yazdırma
+// Dinamik vektÃ¶r oluÅŸturma
+double* create_vector(int size) {
+    if (size <= 0) {
+        return NULL;
+    }
+    double* vector = (double*)malloc(size * sizeof(double));
+    if (!vector) {
+        fprintf(stderr, "Bellek tahsisi basarisiz.\n");
+        exit(EXIT_FAILURE);
+    }
+    return vector;
+}
+
+// VektÃ¶r serbest bÄ±rakma
+void free_vector(double* vector) {
+    if (vector) {
+        free(vector);
+    }
+}
+
+// Matris yazdÄ±rma
 void print_matrix(int rows, int cols, double** matrix) {
+    if (!matrix) {
+        return;
+    }
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            printf("%8.3f ", matrix[i][j]);
+            printf("%8.2f ", matrix[i][j]);
         }
         printf("\n");
     }
-    printf("\n");
 }
 
-// Matris başlangıç değeri ile doldurma
+// VektÃ¶r yazdÄ±rma
+void print_vector(int size, double* vector) {
+    if (!vector) {
+        return;
+    }
+    for (int i = 0; i < size; i++) {
+        printf("v[%d] = %8.2f\n", i + 1, vector[i]);
+    }
+}
+
+// Matris baÅŸlangÄ±Ã§ deÄŸeri ile doldurma
 void initialize_matrix(int rows, int cols, double** matrix, double value) {
+    if (!matrix) {
+        return;
+    }
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
             matrix[i][j] = value;
@@ -39,12 +94,14 @@ void initialize_matrix(int rows, int cols, double** matrix, double value) {
     }
 }
 
-// Satır değiştirme (Gaus eliminasyonu için gerekli)
+// SatÄ±r takaslama
 void swap_rows(int cols, double** matrix, int row1, int row2) {
+    if (!matrix || row1 == row2) {
+        return;
+    }
     for (int i = 0; i < cols; i++) {
         double temp = matrix[row1][i];
         matrix[row1][i] = matrix[row2][i];
         matrix[row2][i] = temp;
     }
 }
-
